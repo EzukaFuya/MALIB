@@ -39,7 +39,8 @@
 *                      1.23 update option string ISTOPT,OSTOPT,FMTOPT
 *           2024/02/01 1.24 branch from ver.2.4.3b35 for MALIB
 *                           add option -rst
-*           2024/08/02 1.25 fix bug confwrite() con_close()
+*           2024/08/02 1.25 add stat format option
+*                           fix bug confwrite() con_close()
 *-----------------------------------------------------------------------------*/
 #include <stdlib.h>
 #include <signal.h>
@@ -192,7 +193,7 @@ static const char *pathopts[]={         /* path options help */
 #define FLGOPT  "0:off,1:std+2:age/ratio/ns"
 #define ISTOPT  "0:off,1:serial,2:file,3:tcpsvr,4:tcpcli,6:ntripcli,7:ftp,8:http,10:udpsvr,11:udpcli"
 #define OSTOPT  "0:off,1:serial,2:file,3:tcpsvr,4:tcpcli,5:ntripsvr,9:ntripcas,10:udpsvr,11:udpcli"
-#define FMTOPT  "0:rtcm2,1:rtcm3,2:oem4,3:oem3,4:ubx,5:ss2,6:hemis,7:skytraq,8:javad,9:nvs,10:binex,11:rt17,12:sbf,14:sp3,21:l6e"
+#define FMTOPT  "0:rtcm2,1:rtcm3,2:oem4,3:oem3,4:ubx,5:ss2,6:hemis,7:skytraq,8:javad,9:nvs,10:binex,11:rt17,12:sbf,14:sp3,20:stat,21:l6e"
 #define NMEOPT  "0:off,1:latlon,2:single"
 #define SOLOPT  "0:llh,1:xyz,2:enu,3:nmea,4:stat"
 #define MSGOPT  "0:all,1:rover,2:base,3:corr"

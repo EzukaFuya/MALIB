@@ -7,6 +7,8 @@
 * history : 2015/05/20 1.0 new
 *           2015/06/11 1.1 station weighting only by distance
 *           2023/05/09 1.2 branch from MALIB
+*           2024/08/02 1.3 add sat elevation argument for pppcorr_stec()
+*                          add input_stat()
 *-----------------------------------------------------------------------------*/
 #include "rtklib.h"
 
@@ -324,6 +326,106 @@ extern int pppcorr_read(pppcorr_t *corr, const char *file)
         trace(2,"%-8s %6d %6d\n",corr->stas[i],corr->ns[i],corr->nt[i]);
     }
     return 1;
+}
+/* input stat message --------------------------------------------------------*/
+extern int input_stat(rtcm_t *rtcm, unsigned char data, rtksvr_t *svr)
+{
+    double tow=0,rr[3]={0},azel[2]={0},ion=0,ztd={0},grad[2]={0},std[2]={0};
+    char sat[64]="",*token;
+    int n,week=0,stat=0,rcv=0;
+    gtime_t time;
+    pppcorr_t *corr=&svr->nav.pppcorr;
+    stec_t *stec=svr->nav.pppcorr.stec[0];
+    trop_t *trop=svr->nav.pppcorr.trop[0];
+
+    /* synchronize frame */
+    if (rtcm->nbyte==0) {
+        if (data!='$') return 0;
+        rtcm->buff[rtcm->nbyte++]=data;
+        return 0;
+    }
+    rtcm->buff[rtcm->nbyte++]=data;
+
+    if(data=='\n') {
+        rtcm->buff[rtcm->nbyte]='\0';
+        if(strstr((char*)rtcm->buff,"$POS")!=NULL) {
+            n=0;
+            token=strtok((char*)rtcm->buff,",");
+            token=strtok(NULL,","); if (token!=NULL) {n++; week =atoi(token);}
+            token=strtok(NULL,","); if (token!=NULL) {n++; tow  =atof(token);}
+            token=strtok(NULL,","); if (token!=NULL) {n++; stat =atoi(token);}
+            token=strtok(NULL,","); if (token!=NULL) {n++; rr[0]=atof(token);}
+            token=strtok(NULL,","); if (token!=NULL) {n++; rr[1]=atoi(token);}
+            token=strtok(NULL,","); if (token!=NULL) {n++; rr[2]=atoi(token);}
+
+            if (n>=6) {
+                corr->nsta=1;
+                memcpy(corr->rr[0],rr,sizeof(rr));
+            }
+        }
+        if(strstr((char*)rtcm->buff,"$ION")!=NULL) {
+            n=0;
+            token=strtok((char*)rtcm->buff,",");
+            token=strtok(NULL,","); if (token!=NULL) {n++; week   =atoi(token);}
+            token=strtok(NULL,","); if (token!=NULL) {n++; tow    =atof(token);}
+            token=strtok(NULL,","); if (token!=NULL) {n++; stat   =atoi(token);}
+            token=strtok(NULL,","); if (token!=NULL) {n++; strcpy(sat,token);  }
+            token=strtok(NULL,","); if (token!=NULL) {n++; azel[0]=atof(token);}
+            token=strtok(NULL,","); if (token!=NULL) {n++; azel[1]=atof(token);}
+            token=strtok(NULL,","); if (token!=NULL) {n++; ion    =atof(token);}
+            token=strtok(NULL,","); if (token!=NULL) {n++; std[0] =atof(token);}
+            if (n>=8) {
+                time=gpst2time(week,tow);
+                if(corr->ns[0]>0 && timediff(stec[corr->ns[0]-1].time,time)<0) corr->ns[0]=0;
+                stec[corr->ns[0]].time=time;
+                stec[corr->ns[0]].sat=satid2no(sat);
+                stec[corr->ns[0]].ion=ion;
+                stec[corr->ns[0]].std=std[0];
+                stec[corr->ns[0]].azel[0]=azel[0]*D2R;
+                stec[corr->ns[0]].azel[1]=azel[1]*D2R;
+                corr->ns[0]++;
+            }
+        }
+        /* troposphere ztd */
+        if(strstr((char*)rtcm->buff,"$TROP")!=NULL) {
+            n=0;
+            token=strtok((char*)rtcm->buff,",");
+            token=strtok(NULL,","); if (token!=NULL) {n++; week  =atoi(token);}
+            token=strtok(NULL,","); if (token!=NULL) {n++; tow   =atof(token);}
+            token=strtok(NULL,","); if (token!=NULL) {n++; stat  =atoi(token);}
+            token=strtok(NULL,","); if (token!=NULL) {n++; rcv   =atoi(token);}
+            token=strtok(NULL,","); if (token!=NULL) {n++; ztd   =atof(token);}
+            token=strtok(NULL,","); if (token!=NULL) {n++; std[0]=atof(token);}
+            if (n>=6) {
+                trop[0].time=gpst2time(week,tow);
+                trop[0].trp[0]=ztd;
+                trop[0].std[0]=std[0];
+                corr->nt[0]=1;
+            }
+        }
+        /* troposphere gradient */
+        if (strstr((char*)rtcm->buff,"$TRPG")!=NULL) {
+            n=0;
+            token=strtok((char*)rtcm->buff,",");
+            token=strtok(NULL,","); if (token!=NULL) {n++; week   =atoi(token);}
+            token=strtok(NULL,","); if (token!=NULL) {n++; tow    =atof(token);}
+            token=strtok(NULL,","); if (token!=NULL) {n++; stat   =atoi(token);}
+            token=strtok(NULL,","); if (token!=NULL) {n++; rcv    =atoi(token);}
+            token=strtok(NULL,","); if (token!=NULL) {n++; grad[0]=atof(token);}
+            token=strtok(NULL,","); if (token!=NULL) {n++; grad[1]=atof(token);}
+            token=strtok(NULL,","); if (token!=NULL) {n++; std[0] =atof(token);}
+            token=strtok(NULL,","); if (token!=NULL) {n++; std[1] =atof(token);}
+            if (n>=8) {
+                trop[0].trp[1]=grad[0];
+                trop[0].trp[2]=grad[1];
+                trop[0].std[1]=std[0];
+                trop[0].std[2]=std[1];
+            }
+        }
+
+        rtcm->nbyte=0;
+    }
+    return 0;
 }
 
 /* free ppp corrections --------------------------------------------------------

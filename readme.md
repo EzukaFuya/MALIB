@@ -114,9 +114,10 @@ git clone https://github.com/JAXA-SNU/MALIB.git
 * Based on RTKLIB 2.4.3 b34 modified version
 * Real-time / Post-Process positioning
 * Apply various GNSS satellites (GPS/GLONASS/GALILEO/QZSS)
-* PPP and PPP-AR
+* PPP and PPP-AR (Ambiguity Resolution)
 * Apply various L6E data format (e.g. ubx/sbf/msj)
 * Select frequency depends on the GNSS satellites
+* Single-station atmospheric delay correction
 
 > [!NOTE]
 > PPP-AR only works on the ionosphere configuration STEC estimation (```pos1-ionoopt       =est-stec```)
@@ -153,22 +154,25 @@ pos2-ign_chierr    =on         # (0:off,1:on)
 If you want to use NTRIP
 ```sh
 # str1 : Your GNSS Receiver data
-# str2 : Correction data (e.g. RTK/DGNSS)
+# str2 : Correction data (e.g. RTK/DGNSS/Local Augmentation)
 # str3 : Correction data (e.g. PPP)
 
-# Input stream type (0:off,1:serial,2:file,3:tcpsvr,4:tcpcli,7:ntripcli,8:ftp,9:http)
+# Input stream type
+# 0:off,1:serial,2:file,3:tcpsvr,4:tcpcli,7:ntripcli,8:ftp,9:http
 inpstr1-type       =ntripcli    
-inpstr2-type       =off         
+inpstr2-type       =ntripcli   # if needed
 inpstr3-type       =ntripcli
 
 # Input stream path
 inpstr1-path       =[user[:passwd]]@addr:port/mntpnt
-inpstr2-path       =                          
+inpstr2-path       =[user[:passwd]]@addr:port/mntpnt   # if needed                 
 inpstr3-path       =[user[:passwd]]@addr:port/mntpnt
 
-# Input stream format (0:rtcm2,1:rtcm3,2:oem4,3:oem3,4:ubx,5:ss2,6:hemis,7:skytraq,8:sp3)
+# Input stream format 
+# 0:rtcm2,1:rtcm3,2:oem4,3:oem3,4:ubx,5:ss2,6:hemis,7:skytraq,8:javad,9:nvs
+# 10:binex,11:rt17,12:sbf,14:sp3,20:stat,21:l6e
 inpstr1-format     =rtcm3       
-inpstr2-format     =
+inpstr2-format     =stat   # if needed 
 inpstr3-format     =rtcm3       
 ```
 
@@ -352,14 +356,8 @@ navigation satellite system).[RTKLIB manual](https://www.rtklib.com/prog/manual_
 │       └── redist.txt
 ├── readme.md
 └── src
-    ├── convgpx.c
-    ├── convkml.c
-    ├── convrnx.c
-    ├── datum.c
-    ├── download.c
     ├── ephemeris.c
     ├── geoid.c
-    ├── gis.c
     ├── ionex.c
     ├── lambda.c
     ├── mdccssr.c
@@ -394,9 +392,7 @@ navigation satellite system).[RTKLIB manual](https://www.rtklib.com/prog/manual_
     ├── sbas.c
     ├── solution.c
     ├── stream.c
-    ├── streamsvr.c
-    ├── tides.c
-    └── tle.c
+    └── tides.c
 ```
 </details>
 
@@ -404,6 +400,8 @@ navigation satellite system).[RTKLIB manual](https://www.rtklib.com/prog/manual_
 | Date       | version     | feature      |
 |:-----------|------------:|:------------:|
 | 2024/09/27 | 1.0.0       | first trail version MALIB |
+| 2025/02/28 | 1.1.0       | Add single-station atmospheric delay correction|
+|            |             | Delete unused files |
 | TBD  |  TBD    | TBD            |
 |
 

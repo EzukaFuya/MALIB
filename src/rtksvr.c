@@ -50,6 +50,7 @@
 *           2021/05/21  1.24 fix typos in comments
 *           2024/02/01  1.25 branch from ver.2.4.3b35 for MALIB
 *                            fix bug update_ssr(),rtksrvinit()
+*           2024/08/02  1.26 support stat format
 *-----------------------------------------------------------------------------*/
 #include "rtklib.h"
 
@@ -381,6 +382,10 @@ static int decoderaw(rtksvr_t *svr, int index)
         }
         else if (svr->format[index]==STRFMT_L6E) {
             ret=input_qzssl6e(svr->rtcm+index,svr->buff[index][i]);
+        }
+        else if (svr->format[index]==STRFMT_STAT) {
+            /* decode stat */
+            ret = input_stat(svr->rtcm+index,svr->buff[index][i],svr);
         }
         else {
             ret=input_raw(svr->raw+index,svr->rtcm+index,svr->format[index],svr->buff[index][i]);

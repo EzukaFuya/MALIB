@@ -28,7 +28,8 @@
 *           2013/03/28 1.10 rtklib ver.2.4.2
 *           2021/01/04 1.11 rtklib ver.2.4.3 b35
 *           2024/02/01 1.12 branch from ver.2.4.3b35 for MALIB
-*           2024/08/02 1.13 MALIB ver.1.0.0
+*           2024/08/02 1.13 MALIB ver.1.1.0
+*                           add stat format
 *-----------------------------------------------------------------------------*/
 #ifndef RTKLIB_H
 #define RTKLIB_H
@@ -54,7 +55,7 @@ extern "C" {
 /* constants -----------------------------------------------------------------*/
 
 #define VER_RTKLIB  "2.4.3"             /* library version */
-#define VER_MALIB   "1.0.0"             /* MALIB version */
+#define VER_MALIB   "1.1.0"             /* MALIB version */
 
 #define PATCH_LEVEL "b35"               /* patch level */
 #define PATCH_LEVEL_MALIB ""
@@ -460,6 +461,7 @@ extern "C" {
 #define STRFMT_RNXCLK 15                /* stream format: RINEX CLK */
 #define STRFMT_SBAS  16                 /* stream format: SBAS messages */
 #define STRFMT_NMEA  17                 /* stream format: NMEA 0183 */
+#define STRFMT_STAT  20                 /* stream format: stat */
 #define STRFMT_L6E   21                 /* stream format: L6E CSSR */
 #define MAXRCVFMT    12                 /* max number of receiver format */
 
@@ -1769,6 +1771,7 @@ extern int pppcorr_trop(const pppcorr_t *corr, gtime_t time, const double *pos,
                         double *ztd, double *std);
 extern int pppcorr_stec(const pppcorr_t *corr, gtime_t time, const double *pos,
                         const double *el,double *ion, double *std);
+extern int input_stat(rtcm_t *rtcm, unsigned char data, rtksvr_t *svr);
 
 /* post-processing positioning -----------------------------------------------*/
 int postpos(gtime_t ts, gtime_t te, double ti, double tu, const prcopt_t *popt,

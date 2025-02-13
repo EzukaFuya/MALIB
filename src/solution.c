@@ -993,7 +993,40 @@ extern void freesolstatbuf(solstatbuf_t *solstatbuf)
     free(solstatbuf->data);
     solstatbuf->data=NULL;
 }
-
+/* compare solution status ---------------------------------------------------*/
+static int cmpsolstat(const void *p1, const void *p2)
+{
+    solstat_t *q1=(solstat_t *)p1,*q2=(solstat_t *)p2;
+    double tt=timediff(q1->time,q2->time);
+    return tt<-0.0?-1:(tt>0.0?1:0);
+}
+/* sort and uniq solution status ---------------------------------------------*/
+static int sort_solstat(solstatbuf_t *statbuf)
+{
+    solstat_t *statbuf_data;
+    int i,n;
+    
+    trace(4,"sort_solstat: n=%d\n",statbuf->n);
+    
+    if (statbuf->n<=0) return 0;
+    
+    if (!(statbuf_data=realloc(statbuf->data,sizeof(solstat_t)*statbuf->n))) {
+        trace(1,"sort_solstat: memory allocation error\n");
+        free(statbuf->data); statbuf->data=NULL; statbuf->n=statbuf->nmax=0;
+        return 0;
+    }
+    statbuf->data=statbuf_data;
+    qsort(statbuf->data,statbuf->n,sizeof(solstat_t),cmpsolstat);
+    
+    /* remove duplicated data */
+    for (i=n=0;i<statbuf->n;i++) {
+        if (i==0||timediff(statbuf->data[i].time,statbuf->data[i-1].time)>1e-3) {
+            statbuf->data[n++]=statbuf->data[i];
+        }
+    }
+    statbuf->n=n;
+    return 1;
+}
 /* decode solution status ----------------------------------------------------*/
 static int decode_solstat(char *buff, solstat_t *stat)
 {
@@ -1115,8 +1148,11 @@ extern int readsolstatt(char *files[], int nfile, gtime_t ts, gtime_t te,
         }
         fclose(fp);
     }
-
+#if 0
+    return sort_solstat(statbuf);
+#else
     return 1;
+#endif
 }
 extern int readsolstat(char *files[], int nfile, solstatbuf_t *statbuf)
 {
