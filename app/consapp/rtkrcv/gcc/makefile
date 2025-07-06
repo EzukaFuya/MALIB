@@ -17,7 +17,7 @@ LDLIBS  = $(LIBS) -lm -lrt -lpthread
 
 all        : rtkrcv
 rtkrcv     : rtkrcv.o vt.o rtkcmn.o rtksvr.o rtkpos.o geoid.o solution.o lambda.o
-rtkrcv     : sbas.o stream.o rcvraw.o rtcm.o preceph.o options.o pntpos.o ppp.o ppp_ar.o ppp_corr.o
+rtkrcv     : sbas.o stream.o rcvraw.o rtcm.o preceph.o options.o pntpos.o ppp.o ppp_ar.o ppp_corr.o ppp_iono.o mdciono.o
 rtkrcv     : novatel.o ublox.o ss2.o crescent.o skytraq.o javad.o nvs.o binex.o
 rtkrcv     : rt17.o ephemeris.o rinex.o ionex.o rtcm2.o rtcm3.o rtcm3e.o
 rtkrcv     : tides.o septentrio.o mdccssr.o
@@ -64,6 +64,10 @@ ppp_ar.o   : $(SRC)/ppp_ar.c
 	$(CC) -c $(CFLAGS) $(SRC)/ppp_ar.c
 ppp_corr.o : $(SRC)/ppp_corr.c
 	$(CC) -c $(CFLAGS) $(SRC)/ppp_corr.c
+ppp_iono.o : $(SRC)/ppp_iono.c
+	$(CC) -c $(CFLAGS) $(SRC)/ppp_iono.c
+mdciono.o  : $(SRC)/mdciono.c
+	$(CC) -c $(CFLAGS) $(SRC)/mdciono.c
 novatel.o  : $(SRC)/rcv/novatel.c
 	$(CC) -c $(CFLAGS) $(SRC)/rcv/novatel.c
 ublox.o    : $(SRC)/rcv/ublox.c
@@ -114,6 +118,8 @@ pntpos.o   : $(SRC)/rtklib.h
 ppp.o      : $(SRC)/rtklib.h
 ppp_ar.o   : $(SRC)/rtklib.h
 ppp_corr.o : $(SRC)/rtklib.h
+ppp_iono.o : $(SRC)/rtklib.h
+mdciono.o  : $(SRC)/rtklib.h
 novatel.o  : $(SRC)/rtklib.h
 ublox.o    : $(SRC)/rtklib.h
 ss2.o      : $(SRC)/rtklib.h

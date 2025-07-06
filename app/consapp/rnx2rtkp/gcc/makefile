@@ -18,7 +18,7 @@ LDLIBS = $(LIBS) -lm -lrt
 all        : rnx2rtkp
 rnx2rtkp   : rnx2rtkp.o rtkcmn.o rinex.o rtkpos.o postpos.o solution.o
 rnx2rtkp   : lambda.o geoid.o sbas.o preceph.o pntpos.o ephemeris.o options.o
-rnx2rtkp   : ppp.o ppp_ar.o ppp_corr.o rtcm.o rtcm2.o rtcm3.o rtcm3e.o ionex.o tides.o mdccssr.o
+rnx2rtkp   : ppp.o ppp_ar.o ppp_corr.o ppp_iono.o mdciono.o rtcm.o rtcm2.o rtcm3.o rtcm3e.o ionex.o tides.o mdccssr.o
 
 rnx2rtkp.o : ../rnx2rtkp.c
 	$(CC) -c $(CFLAGS) ../rnx2rtkp.c
@@ -52,6 +52,10 @@ ppp_ar.o   : $(SRC)/ppp_ar.c
 	$(CC) -c $(CFLAGS) $(SRC)/ppp_ar.c
 ppp_corr.o : $(SRC)/ppp_corr.c
 	$(CC) -c $(CFLAGS) $(SRC)/ppp_corr.c
+ppp_iono.o : $(SRC)/ppp_iono.c
+	$(CC) -c $(CFLAGS) $(SRC)/ppp_iono.c
+mdciono.o  : $(SRC)/mdciono.c
+	$(CC) -c $(CFLAGS) $(SRC)/mdciono.c
 rtcm.o     : $(SRC)/rtcm.c
 	$(CC) -c $(CFLAGS) $(SRC)/rtcm.c
 rtcm2.o    : $(SRC)/rtcm2.c
@@ -83,6 +87,8 @@ options.o  : $(SRC)/rtklib.h
 ppp.o      : $(SRC)/rtklib.h
 ppp_ar.o   : $(SRC)/rtklib.h
 ppp_corr.o : $(SRC)/rtklib.h
+ppp_iono.o : $(SRC)/rtklib.h
+mdciono.o  : $(SRC)/rtklib.h
 rtcm.o     : $(SRC)/rtklib.h
 rtcm2.o    : $(SRC)/rtklib.h
 rtcm3.o    : $(SRC)/rtklib.h

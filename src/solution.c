@@ -1,7 +1,9 @@
 /*------------------------------------------------------------------------------
 * solution.c : solution functions
 *
-*          Copyright (C) 2007-2021 by T.TAKASU, All rights reserved.
+*          Copyright (C) 2023-2025 Cabinet Office, Japan, All rights reserved.
+*          Copyright (C) 2025 Lighthouse Technology & Consulting Co. Ltd., All rights reserved.
+*          Copyright (C) 2007-2020 by T.TAKASU, All rights reserved.
 *
 * references :
 *     [1] National Marine Electronic Association and International Marine
@@ -53,11 +55,10 @@
 *                            add reading age information in NMEA GGA
 *                            use integer types in stdint.h
 *                            suppress warnings
-*           2021/02/08  1.19 remove duplicated data in readsol(),readsolstat()
-*           2021/05/21  1.20 fix typos in comments
-*           2024/02/01  1.21 branch from ver.2.4.3b35 for MALIB
-*                            add arsys to solution
-*           2024/08/02  1.22 delete amb glo from solution
+*           2023/01/06  1.19 branch from ver.2.4.3b34 for MADOCALIB
+*           2024/01/10  1.20 add arsys to solution
+*           2024/03/15  1.21 delete amb glo from solution
+*                            add processing signal option to solution
 *-----------------------------------------------------------------------------*/
 #include <ctype.h>
 #include "rtklib.h"
@@ -215,7 +216,7 @@ static int decode_nmearmc(char **val, int n, sol_t *sol)
     sol->stat=mode=='D'?SOLQ_DGPS:SOLQ_SINGLE;
     sol->ns=0;
     
-    sol->type=0; /* position type = xyz */
+    sol->type=0; /* postion type = xyz */
     
     trace(5,"decode_nmearmc: %s rr=%.3f %.3f %.3f stat=%d ns=%d vel=%.2f dir=%.0f ang=%.0f mew=%c mode=%c\n",
           time_str(sol->time,0),sol->rr[0],sol->rr[1],sol->rr[2],sol->stat,sol->ns,
@@ -299,7 +300,7 @@ static int decode_nmeagga(char **val, int n, sol_t *sol)
     sol->ns=nrcv;
     sol->age=(float)age;
     
-    sol->type=0; /* position type = xyz */
+    sol->type=0; /* postion type = xyz */
     
     trace(5,"decode_nmeagga: %s rr=%.3f %.3f %.3f stat=%d ns=%d hdop=%.1f ua=%c um=%c\n",
           time_str(sol->time,0),sol->rr[0],sol->rr[1],sol->rr[2],sol->stat,sol->ns,
@@ -457,7 +458,7 @@ static int decode_solxyz(char *buff, const solopt_t *opt, sol_t *sol)
         }
         covtosol_vel(P,sol);
     }
-    sol->type=0; /* position type = xyz */
+    sol->type=0; /* postion type = xyz */
     
     if (MAXSOLQ<sol->stat) sol->stat=SOLQ_NONE;
     return 1;
@@ -523,7 +524,7 @@ static int decode_solllh(char *buff, const solopt_t *opt, sol_t *sol)
         covecef(pos,Q,P);
         covtosol_vel(P,sol);
     }
-    sol->type=0; /* position type = xyz */
+    sol->type=0; /* postion type = xyz */
     
     if (MAXSOLQ<sol->stat) sol->stat=SOLQ_NONE;
     return 1;
@@ -558,7 +559,7 @@ static int decode_solenu(char *buff, const solopt_t *opt, sol_t *sol)
     if (i<n) sol->age  =(float)val[i++];
     if (i<n) sol->ratio=(float)val[i++];
     
-    sol->type=1; /* position type = enu */
+    sol->type=1; /* postion type = enu */
     
     if (MAXSOLQ<sol->stat) sol->stat=SOLQ_NONE;
     return 1;
@@ -806,11 +807,10 @@ static int cmpsol(const void *p1, const void *p2)
     double tt=timediff(q1->time,q2->time);
     return tt<-0.0?-1:(tt>0.0?1:0);
 }
-/* sort and uniq solution data -----------------------------------------------*/
+/* sort solution data --------------------------------------------------------*/
 static int sort_solbuf(solbuf_t *solbuf)
 {
     sol_t *solbuf_data;
-    int i,n;
     
     trace(4,"sort_solbuf: n=%d\n",solbuf->n);
     
@@ -823,14 +823,7 @@ static int sort_solbuf(solbuf_t *solbuf)
     }
     solbuf->data=solbuf_data;
     qsort(solbuf->data,solbuf->n,sizeof(sol_t),cmpsol);
-    
-    /* remove duplicated data */
-    for (i=n=0;i<solbuf->n;i++) {
-        if (i==0||timediff(solbuf->data[i].time,solbuf->data[i-1].time)>1e-3) {
-            solbuf->data[n++]=solbuf->data[i];
-        }
-    }
-    solbuf->n=n;
+    solbuf->nmax=solbuf->n;
     solbuf->start=0;
     solbuf->end=solbuf->n-1;
     return 1;
@@ -1000,11 +993,10 @@ static int cmpsolstat(const void *p1, const void *p2)
     double tt=timediff(q1->time,q2->time);
     return tt<-0.0?-1:(tt>0.0?1:0);
 }
-/* sort and uniq solution status ---------------------------------------------*/
+/* sort solution data --------------------------------------------------------*/
 static int sort_solstat(solstatbuf_t *statbuf)
 {
     solstat_t *statbuf_data;
-    int i,n;
     
     trace(4,"sort_solstat: n=%d\n",statbuf->n);
     
@@ -1017,14 +1009,7 @@ static int sort_solstat(solstatbuf_t *statbuf)
     }
     statbuf->data=statbuf_data;
     qsort(statbuf->data,statbuf->n,sizeof(solstat_t),cmpsolstat);
-    
-    /* remove duplicated data */
-    for (i=n=0;i<statbuf->n;i++) {
-        if (i==0||timediff(statbuf->data[i].time,statbuf->data[i-1].time)>1e-3) {
-            statbuf->data[n++]=statbuf->data[i];
-        }
-    }
-    statbuf->n=n;
+    statbuf->nmax=statbuf->n;
     return 1;
 }
 /* decode solution status ----------------------------------------------------*/
@@ -1148,11 +1133,7 @@ extern int readsolstatt(char *files[], int nfile, gtime_t ts, gtime_t te,
         }
         fclose(fp);
     }
-#if 0
     return sort_solstat(statbuf);
-#else
-    return 1;
-#endif
 }
 extern int readsolstat(char *files[], int nfile, solstatbuf_t *statbuf)
 {
@@ -1457,52 +1438,81 @@ extern int outprcopts(uint8_t *buff, const prcopt_t *opt)
     const char *s8[]={
         "OFF","Continuous","Instantaneous","Fix and Hold","","",""
     };
+#if 0    
+    const char *s9[]={
+        "OFF","ON","","",""
+    };
+#endif    
+    const char *s10[]={
+        "L1/L2","L1/L5","L1/L2/L5","",""
+    };
+    const char *s11[]={
+        "L1/L5","L1/L2","L1/L5/L2","",""
+    };
+    const char *s12[]={
+        "E1/E5a","E1/E5b","E1/E6","E1/E5a/E5b/E6","E1/E5a/E6/E5b",""
+    };
+    const char *s13[]={
+        "B1I/B3I","B1I/B2I","B1I/B3I/B2I","",""
+    };
+    const char *s14[]={
+        "B1I/B3I","B1I/B2a","B1I/B3I/B2a","","",""
+    };
+    
     int i;
     char *p=(char *)buff;
     
     trace(3,"outprcopts:\n");
     
-    p+=sprintf(p,"%s pos mode  : %s\r\n",COMMENTH,s1[opt->mode]);
+    p+=sprintf(p,"%s pos mode   : %s\r\n",COMMENTH,s1[opt->mode]);
     
     if (PMODE_DGPS<=opt->mode&&opt->mode<=PMODE_PPP_FIXED) {
-        p+=sprintf(p,"%s freqs     : %s\r\n",COMMENTH,s2[opt->nf-1]);
+        p+=sprintf(p,"%s freqs      : %s\r\n",COMMENTH,s2[opt->nf-1]);
+        
+        p+=sprintf(p,"%s siggps     : %s\r\n",COMMENTH,s10[opt->pppsig[0]]);
+        p+=sprintf(p,"%s sigqzs     : %s\r\n",COMMENTH,s11[opt->pppsig[1]]);
+        p+=sprintf(p,"%s siggal     : %s\r\n",COMMENTH,s12[opt->pppsig[2]]);
+        p+=sprintf(p,"%s sigbds2    : %s\r\n",COMMENTH,s13[opt->pppsig[3]]);
+        p+=sprintf(p,"%s sigbds3    : %s\r\n",COMMENTH,s14[opt->pppsig[4]]);
     }
     if (opt->mode>PMODE_SINGLE) {
-        p+=sprintf(p,"%s solution  : %s\r\n",COMMENTH,s3[opt->soltype]);
+        p+=sprintf(p,"%s solution   : %s\r\n",COMMENTH,s3[opt->soltype]);
     }
-    p+=sprintf(p,"%s elev mask : %.1f deg\r\n",COMMENTH,opt->elmin*R2D);
+    p+=sprintf(p,"%s elev mask  : %.1f deg\r\n",COMMENTH,opt->elmin*R2D);
     if (opt->mode>PMODE_SINGLE) {
-        p+=sprintf(p,"%s dynamics  : %s\r\n",COMMENTH,opt->dynamics?"on":"off");
-        p+=sprintf(p,"%s tidecorr  : %s\r\n",COMMENTH,opt->tidecorr?"on":"off");
+        p+=sprintf(p,"%s dynamics   : %s\r\n",COMMENTH,opt->dynamics?"on":"off");
+        p+=sprintf(p,"%s tidecorr   : %s\r\n",COMMENTH,opt->tidecorr?"on":"off");
     }
     if (opt->mode<=PMODE_PPP_FIXED) {
-        p+=sprintf(p,"%s ionos opt : %s\r\n",COMMENTH,s4[opt->ionoopt]);
+        p+=sprintf(p,"%s ionos opt  : %s\r\n",COMMENTH,s4[opt->ionoopt]);
     }
-    p+=sprintf(p,"%s tropo opt : %s\r\n",COMMENTH,s5[opt->tropopt]);
-    p+=sprintf(p,"%s ephemeris : %s\r\n",COMMENTH,s6[opt->sateph]);
-    p+=sprintf(p,"%s navi sys  :",COMMENTH);
+    p+=sprintf(p,"%s tropo opt  : %s\r\n",COMMENTH,s5[opt->tropopt]);
+    p+=sprintf(p,"%s ephemeris  : %s\r\n",COMMENTH,s6[opt->sateph]);
+    p+=sprintf(p,"%s navi sys   :",COMMENTH);
     for (i=0;sys[i];i++) {
         if (opt->navsys&sys[i]) p+=sprintf(p," %s",s7[i]);
     }
     p+=sprintf(p,"\r\n");
-    p+=sprintf(p,"%s ar sys    :",COMMENTH);
-    for (i=0;sys[i];i++) {
-        if (opt->arsys&sys[i]) p+=sprintf(p," %s",s7[i]);
-    }
-    p+=sprintf(p,"\r\n");
     if (PMODE_KINEMA<=opt->mode&&opt->mode<=PMODE_PPP_FIXED) {
-        p+=sprintf(p,"%s amb res   : %s\r\n",COMMENTH,s8[opt->modear]);
+        p+=sprintf(p,"%s amb mode   : %s\r\n",COMMENTH,s8[opt->modear]);
+        p+=sprintf(p,"%s ar sys     :",COMMENTH);
+        for (i=0;sys[i];i++) {
+            if (opt->arsys&sys[i]) p+=sprintf(p," %s",s7[i]);
+        }
+        p+=sprintf(p,"\r\n");
         if (opt->thresar[0]>0.0) {
-            p+=sprintf(p,"%s val thres : %.1f\r\n",COMMENTH,opt->thresar[0]);
+            p+=sprintf(p,"%s val ratio  : %.1f\r\n",COMMENTH,opt->thresar[0]);
+            p+=sprintf(p,"%s max std pos: %.1f m\r\n",COMMENTH,opt->thresar[1]);
         }
     }
     if (opt->mode==PMODE_MOVEB&&opt->baseline[0]>0.0) {
-        p+=sprintf(p,"%s baseline  : %.4f %.4f m\r\n",COMMENTH,
+        p+=sprintf(p,"%s baseline   : %.4f %.4f m\r\n",COMMENTH,
                    opt->baseline[0],opt->baseline[1]);
     }
+    p+=sprintf(p,"%s ionocorr   : %s\r\n",COMMENTH,opt->ionocorr?"on":"off");
     for (i=0;i<2;i++) {
         if (opt->mode==PMODE_SINGLE||(i>=1&&opt->mode>PMODE_FIXED)) continue;
-        p+=sprintf(p,"%s antenna%d  : %-21s (%7.4f %7.4f %7.4f)\r\n",COMMENTH,
+        p+=sprintf(p,"%s antenna%d   : %-21s (%7.4f %7.4f %7.4f)\r\n",COMMENTH,
                    i+1,opt->anttype[i],opt->antdel[i][0],opt->antdel[i][1],
                    opt->antdel[i][2]);
     }
@@ -1649,7 +1659,7 @@ extern int outsols(uint8_t *buff, const sol_t *sol, const double *rb,
     return p-buff;
 }
 /* output solution extended ----------------------------------------------------
-* output solution exteneded information
+* output solution exteneded infomation
 * args   : uint8_t *buff    IO  output buffer
 *          sol_t  *sol      I   solution
 *          ssat_t *ssat     I   satellite status
@@ -1734,7 +1744,7 @@ extern void outsol(FILE *fp, const sol_t *sol, const double *rb,
     }
 }
 /* output solution extended ----------------------------------------------------
-* output solution exteneded information to file
+* output solution exteneded infomation to file
 * args   : FILE   *fp       I   output file pointer
 *          sol_t  *sol      I   solution
 *          ssat_t *ssat     I   satellite status
