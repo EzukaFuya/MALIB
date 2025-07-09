@@ -2040,10 +2040,10 @@ extern uint32_t tickget(void)
 #ifdef WIN32
     return (uint32_t)timeGetTime();
 #else
-    struct timespec tp={0};
     struct timeval  tv={0};
     
 #ifdef CLOCK_MONOTONIC_RAW
+    struct timespec tp={0};
     /* linux kernel > 2.6.28 */
     if (!clock_gettime(CLOCK_MONOTONIC_RAW,&tp)) {
         return tp.tv_sec*1000u+tp.tv_nsec/1000000u;

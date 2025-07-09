@@ -13,7 +13,7 @@ LIBS  =
 #LIBS  += -L$(MKLDIR) -lmkl_intel_lp64 -lmkl_core -lmkl_gnu_thread -lpthread -lgomp
 
 CFLAGS = -Wall -O0 -ansi -pedantic -Wno-unused-but-set-variable -I$(SRC) $(OPTS) -g -O
-LDLIBS = $(LIBS) -lm -lrt
+LDLIBS = $(LIBS) -lm
 
 all        : rnx2rtkp
 rnx2rtkp   : rnx2rtkp.o rtkcmn.o rinex.o rtkpos.o postpos.o solution.o

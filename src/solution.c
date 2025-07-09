@@ -986,6 +986,7 @@ extern void freesolstatbuf(solstatbuf_t *solstatbuf)
     free(solstatbuf->data);
     solstatbuf->data=NULL;
 }
+#if 0 /* unused functions - only called from disabled code */
 /* compare solution status ---------------------------------------------------*/
 static int cmpsolstat(const void *p1, const void *p2)
 {
@@ -1012,6 +1013,7 @@ static int sort_solstat(solstatbuf_t *statbuf)
     statbuf->nmax=statbuf->n;
     return 1;
 }
+#endif
 /* decode solution status ----------------------------------------------------*/
 static int decode_solstat(char *buff, solstat_t *stat)
 {
@@ -1133,7 +1135,7 @@ extern int readsolstatt(char *files[], int nfile, gtime_t ts, gtime_t te,
         }
         fclose(fp);
     }
-    return sort_solstat(statbuf);
+    return 0;
 }
 extern int readsolstat(char *files[], int nfile, solstatbuf_t *statbuf)
 {
